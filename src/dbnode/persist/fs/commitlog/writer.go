@@ -71,6 +71,7 @@ type commitLogWriter interface {
 		datapoint ts.Datapoint,
 		unit xtime.Unit,
 		annotation ts.Annotation,
+		encodedLogEntryBytes []byte,
 	) error
 
 	// Flush will flush the contents to the disk, useful when first testing if first commit log is writable
@@ -172,6 +173,7 @@ func (w *writer) Write(
 	datapoint ts.Datapoint,
 	unit xtime.Unit,
 	annotation ts.Annotation,
+	encodedLogEntryBytes []byte,
 ) error {
 	var logEntry schema.LogEntry
 	logEntry.Create = w.nowFn().UnixNano()
@@ -214,15 +216,22 @@ func (w *writer) Write(
 		logEntry.Metadata = w.metadataEncoder.Bytes()
 	}
 
-	logEntry.Timestamp = datapoint.Timestamp.UnixNano()
-	logEntry.Value = datapoint.Value
-	logEntry.Unit = uint32(unit)
-	logEntry.Annotation = annotation
-	w.logEncoder.Reset()
-	if err := w.logEncoder.EncodeLogEntry(logEntry); err != nil {
-		return err
+	var bytesToWrite []byte
+	if !seen || encodedLogEntryBytes == nil {
+		logEntry.Timestamp = datapoint.Timestamp.UnixNano()
+		logEntry.Value = datapoint.Value
+		logEntry.Unit = uint32(unit)
+		logEntry.Annotation = annotation
+		w.logEncoder.Reset()
+		if err := w.logEncoder.EncodeLogEntry(logEntry); err != nil {
+			return err
+		}
+		bytesToWrite = w.logEncoder.Bytes()
+	} else {
+		bytesToWrite = encodedLogEntryBytes
 	}
-	if err := w.write(w.logEncoder.Bytes()); err != nil {
+
+	if err := w.write(bytesToWrite); err != nil {
 		return err
 	}
 

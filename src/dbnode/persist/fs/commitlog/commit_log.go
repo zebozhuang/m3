@@ -55,6 +55,7 @@ type writeCommitLogFn func(
 	datapoint ts.Datapoint,
 	unit xtime.Unit,
 	annotation ts.Annotation,
+	encodedLogEntryBytes []byte,
 ) error
 type commitLogFailFn func(err error)
 
@@ -108,11 +109,12 @@ const (
 type commitLogWrite struct {
 	valueType valueType
 
-	series       Series
-	datapoint    ts.Datapoint
-	unit         xtime.Unit
-	annotation   ts.Annotation
-	completionFn completionFn
+	series               Series
+	datapoint            ts.Datapoint
+	unit                 xtime.Unit
+	annotation           ts.Annotation
+	completionFn         completionFn
+	encodedLogEntryBytes []byte
 }
 
 // NewCommitLog creates a new commit log
@@ -249,7 +251,7 @@ func (l *commitLog) write() {
 		}
 
 		err := l.writer.Write(write.series,
-			write.datapoint, write.unit, write.annotation)
+			write.datapoint, write.unit, write.annotation, write.encodedLogEntryBytes)
 
 		if err != nil {
 			l.metrics.errors.Inc(1)
@@ -337,8 +339,9 @@ func (l *commitLog) Write(
 	datapoint ts.Datapoint,
 	unit xtime.Unit,
 	annotation ts.Annotation,
+	encodedLogEntryBytes []byte,
 ) error {
-	return l.writeFn(ctx, series, datapoint, unit, annotation)
+	return l.writeFn(ctx, series, datapoint, unit, annotation, encodedLogEntryBytes)
 }
 
 func (l *commitLog) writeWait(
@@ -347,6 +350,7 @@ func (l *commitLog) writeWait(
 	datapoint ts.Datapoint,
 	unit xtime.Unit,
 	annotation ts.Annotation,
+	encodedLogEntryBytes []byte,
 ) error {
 	l.RLock()
 	if l.closed {
@@ -367,11 +371,12 @@ func (l *commitLog) writeWait(
 	}
 
 	write := commitLogWrite{
-		series:       series,
-		datapoint:    datapoint,
-		unit:         unit,
-		annotation:   annotation,
-		completionFn: completion,
+		series:               series,
+		datapoint:            datapoint,
+		unit:                 unit,
+		annotation:           annotation,
+		completionFn:         completion,
+		encodedLogEntryBytes: encodedLogEntryBytes,
 	}
 
 	enqueued := false
@@ -399,6 +404,7 @@ func (l *commitLog) writeBehind(
 	datapoint ts.Datapoint,
 	unit xtime.Unit,
 	annotation ts.Annotation,
+	encodedLogEntryBytes []byte,
 ) error {
 	l.RLock()
 	if l.closed {
@@ -407,10 +413,11 @@ func (l *commitLog) writeBehind(
 	}
 
 	write := commitLogWrite{
-		series:     series,
-		datapoint:  datapoint,
-		unit:       unit,
-		annotation: annotation,
+		series:               series,
+		datapoint:            datapoint,
+		unit:                 unit,
+		annotation:           annotation,
+		encodedLogEntryBytes: encodedLogEntryBytes,
 	}
 
 	enqueued := false

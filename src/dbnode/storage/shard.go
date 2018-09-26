@@ -35,6 +35,8 @@ import (
 	"github.com/m3db/m3/src/dbnode/persist"
 	"github.com/m3db/m3/src/dbnode/persist/fs"
 	"github.com/m3db/m3/src/dbnode/persist/fs/commitlog"
+	"github.com/m3db/m3/src/dbnode/persist/fs/msgpack"
+	"github.com/m3db/m3/src/dbnode/persist/schema"
 	"github.com/m3db/m3/src/dbnode/retention"
 	"github.com/m3db/m3/src/dbnode/runtime"
 	"github.com/m3db/m3/src/dbnode/storage/block"
@@ -147,6 +149,7 @@ type dbShard struct {
 	increasingIndex          increasingIndex
 	seriesPool               series.DatabaseSeriesPool
 	commitLogWriter          commitLogWriter
+	encoders                 chan *msgpack.Encoder
 	reverseIndex             namespaceIndex
 	insertQueue              *dbShardInsertQueue
 	lookup                   *shardMap
@@ -251,6 +254,10 @@ func newDatabaseShard(
 ) databaseShard {
 	scope := opts.InstrumentOptions().MetricsScope().
 		SubScope("dbshard")
+	encoders := make(chan *msgpack.Encoder, 1000)
+	for i := 0; i < 1000; i++ {
+		encoders <- msgpack.NewEncoder()
+	}
 
 	s := &dbShard{
 		opts:               opts,
@@ -263,6 +270,7 @@ func newDatabaseShard(
 		increasingIndex:    increasingIndex,
 		seriesPool:         opts.DatabaseSeriesPool(),
 		commitLogWriter:    commitLogWriter,
+		encoders:           encoders,
 		reverseIndex:       reverseIndex,
 		lookup:             newShardMap(shardMapOptions{}),
 		list:               list.New(),
@@ -887,8 +895,20 @@ func (s *dbShard) writeAndIndex(
 		Value:     value,
 	}
 
+	encoder := <-s.encoders
+	encoder.Reset()
+	encoder.EncodeLogEntry(schema.LogEntry{
+		Index:      series.UniqueIndex,
+		Create:     s.nowFn().UnixNano(),
+		Timestamp:  datapoint.Timestamp.UnixNano(),
+		Value:      datapoint.Value,
+		Unit:       uint32(unit),
+		Annotation: annotation,
+	})
+	encodedLogEntryBytes := encoder.Bytes()
+	s.encoders <- encoder
 	return s.commitLogWriter.Write(ctx, series, datapoint,
-		unit, annotation)
+		unit, annotation, encodedLogEntryBytes)
 }
 
 func (s *dbShard) ReadEncoded(

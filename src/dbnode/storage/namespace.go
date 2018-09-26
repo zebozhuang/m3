@@ -64,6 +64,7 @@ type commitLogWriter interface {
 		datapoint ts.Datapoint,
 		unit xtime.Unit,
 		annotation ts.Annotation,
+		encodedLogEntryBytes []byte,
 	) error
 }
 
@@ -73,6 +74,7 @@ type commitLogWriterFn func(
 	datapoint ts.Datapoint,
 	unit xtime.Unit,
 	annotation ts.Annotation,
+	encodedLogEntryBytes []byte,
 ) error
 
 func (fn commitLogWriterFn) Write(
@@ -81,8 +83,9 @@ func (fn commitLogWriterFn) Write(
 	datapoint ts.Datapoint,
 	unit xtime.Unit,
 	annotation ts.Annotation,
+	encodedLogEntryBytes []byte,
 ) error {
-	return fn(ctx, series, datapoint, unit, annotation)
+	return fn(ctx, series, datapoint, unit, annotation, encodedLogEntryBytes)
 }
 
 var commitLogWriteNoOp = commitLogWriter(commitLogWriterFn(func(
@@ -91,6 +94,7 @@ var commitLogWriteNoOp = commitLogWriter(commitLogWriterFn(func(
 	datapoint ts.Datapoint,
 	unit xtime.Unit,
 	annotation ts.Annotation,
+	encodedLogEntryBytes []byte,
 ) error {
 	return nil
 }))

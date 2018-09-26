@@ -60,6 +60,7 @@ type CommitLog interface {
 		datapoint ts.Datapoint,
 		unit xtime.Unit,
 		annotation ts.Annotation,
+		logEntryBytes []byte,
 	) error
 
 	// Close the commit log
