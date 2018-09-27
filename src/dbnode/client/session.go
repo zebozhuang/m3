@@ -966,8 +966,19 @@ func (s *session) writeAttemptWithRLock(
 	// use in the various queues. Tracking per writeAttempt isn't sufficient as
 	// we may enqueue multiple writeStates concurrently depending on retries
 	// and consistency level checks.
-	nsID := s.pools.id.Clone(namespace)
-	tsID := s.pools.id.Clone(id)
+	var nsID ident.ID
+	if namespace.IsNoFinalize() {
+		nsID = namespace
+	} else {
+		nsID = s.pools.id.Clone(namespace)
+	}
+
+	var tsID ident.ID
+	if id.IsNoFinalize() {
+		tsID = id
+	} else {
+		tsID := s.pools.id.Clone(id)
+	}
 	var tagEncoder serialize.TagEncoder
 	if wType == taggedWriteAttemptType {
 		tagEncoder = s.pools.tagEncoder.Get()
