@@ -22,6 +22,7 @@ package downsample
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -122,7 +123,7 @@ func (w *downsamplerFlushHandlerWriter) Write(
 			name, value := iter.Current()
 			tags = append(tags, models.Tag{Name: string(name), Value: string(value)})
 		}
-		
+
 		if len(chunkSuffix) != 0 {
 			tags = append(tags, models.Tag{Name: aggregationSuffixTag, Value: string(chunkSuffix)})
 		}
@@ -135,6 +136,9 @@ func (w *downsamplerFlushHandlerWriter) Write(
 			return
 		}
 
+		if time.Now().UnixNano()%1000 == 0 {
+			fmt.Println(time.Unix(0, mp.TimeNanos).String())
+		}
 		err = w.handler.storage.Write(w.ctx, &storage.WriteQuery{
 			Tags: models.Normalize(tags),
 			Datapoints: ts.Datapoints{ts.Datapoint{

@@ -19,19 +19,22 @@ curl -vvvsSf -X POST localhost:7201/api/v1/namespace -d '{
     "snapshotEnabled": true,
     "repairEnabled": false,
     "retentionOptions": {
-      "retentionPeriodNanos": 3600000000000,
-      "blockSizeNanos": 300000000000,
-      "bufferFutureNanos": 60000000000,
-      "bufferPastNanos": 60000000000,
+      "retentionPeriodDuration": "10h",
+      "blockSizeDuration": "2h",
+      "bufferFutureDuration": "1h",
+      "bufferPastDuration": "1h",
       "blockDataExpiry": true,
-      "blockDataExpiryAfterNotAccessPeriodNanos": 300000000000
+      "blockDataExpiryAfterNotAccessPeriodDuration": "5m"
     },
     "indexOptions": {
       "enabled": true,
-      "blockSizeNanos": 300000000000
+      "blockSizeDuration": "2h"
     }
   }
 }'
+echo "Validating namespace"
+[ "$(curl -sSf localhost:7201/api/v1/namespace | jq .registry.namespaces.agg.indexOptions.enabled)" == true ]
+echo "Done validating namespace"
 
 sleep 10
 
@@ -47,8 +50,8 @@ curl -vvvsSf -X POST localhost:7201/api/v1/namespace -d '{
     "retentionOptions": {
       "retentionPeriodNanos": 600000000000,
       "blockSizeNanos": 300000000000,
-      "bufferFutureNanos": 60000000000,
-      "bufferPastNanos": 60000000000,
+      "bufferFutureNanos": 120000000000,
+      "bufferPastNanos": 120000000000,
       "blockDataExpiry": true,
       "blockDataExpiryAfterNotAccessPeriodNanos": 300000000000
     },
@@ -63,7 +66,7 @@ echo "Done initializing namespace"
 sleep 10
 
 echo "Validating namespace"
-[ "$(curl -sSf localhost:7201/api/v1/namespace | jq .registry.namespaces.prometheus_metrics.indexOptions.enabled)" == true ]
+[ "$(curl -sSf localhost:7201/api/v1/namespace | jq .registry.namespaces.unagg.indexOptions.enabled)" == true ]
 echo "Done validating namespace"
 
 echo "Initializing topology"
@@ -108,7 +111,7 @@ echo "Validating topology"
 [ "$(curl -sSf localhost:7201/api/v1/placement | jq .placement.instances.m3db_seed.id)" == '"m3db_seed"' ]
 echo "Done validating topology"
 
-sleep 2
+sleep 10
 
 echo "Prometheus available at localhost:9090"
 echo "Grafana available at localhost:3000"
