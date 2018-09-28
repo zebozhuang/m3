@@ -756,10 +756,58 @@
       <input class="md-toggle md-nav__toggle" data-md-toggle="nav-6" type="checkbox" id="nav-6">
     
     <label class="md-nav__link" for="nav-6">
-      Integrations
+      Operational Guides
     </label>
     <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
       <label class="md-nav__title" for="nav-6">
+        Operational Guides
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../operational_guide/placement/" title="Placement / Topology" class="md-nav__link">
+      Placement / Topology
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../operational_guide/bootstrapping/" title="Bootstrapping" class="md-nav__link">
+      Bootstrapping
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-7" type="checkbox" id="nav-7">
+    
+    <label class="md-nav__link" for="nav-7">
+      Integrations
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-7">
         Integrations
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
@@ -996,6 +1044,7 @@
 your_m3db_user        soft nofile 500000
 </code></pre>
 
+<p>Alternatively, if you wish to have <code>m3dbnode</code> run under <code>systemd</code> you can use our <a href="https://github.com/m3db/m3/tree/master/integrations/systemd/m3dbnode.service">service example</a> which will set sane defaults.</p>
 <p>Before running the process make sure the limits are set, if running manually you can raise the limit for the current user with <code>ulimit -n 500000</code>.</p>
 <h2 id="config-files">Config files</h2>
 <p>We wouldn’t feel right to call this guide, “The Hard Way” and not require you to change some configs by hand.</p>
