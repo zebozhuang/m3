@@ -6,9 +6,11 @@ echo "Bringing up nodes in the backgorund with docker compose, remember to run .
 docker-compose -f docker-compose.yml up -d --renew-anon-volumes
 echo "Nodes online"
 
+sleep 10
+
 echo "Initializing namespace"
 curl -vvvsSf -X POST localhost:7201/api/v1/namespace -d '{
-  "name": "prometheus_metrics",
+  "name": "agg",
   "options": {
     "bootstrapEnabled": true,
     "flushEnabled": true,
@@ -17,20 +19,48 @@ curl -vvvsSf -X POST localhost:7201/api/v1/namespace -d '{
     "snapshotEnabled": true,
     "repairEnabled": false,
     "retentionOptions": {
-      "retentionPeriodNanos": 172800000000000,
-      "blockSizeNanos": 7200000000000,
-      "bufferFutureNanos": 600000000000,
-      "bufferPastNanos": 600000000000,
+      "retentionPeriodNanos": 3600000000000,
+      "blockSizeNanos": 300000000000,
+      "bufferFutureNanos": 60000000000,
+      "bufferPastNanos": 60000000000,
       "blockDataExpiry": true,
       "blockDataExpiryAfterNotAccessPeriodNanos": 300000000000
     },
     "indexOptions": {
       "enabled": true,
-      "blockSizeNanos": 7200000000000
+      "blockSizeNanos": 300000000000
+    }
+  }
+}'
+
+sleep 10
+
+curl -vvvsSf -X POST localhost:7201/api/v1/namespace -d '{
+  "name": "unagg",
+  "options": {
+    "bootstrapEnabled": true,
+    "flushEnabled": true,
+    "writesToCommitLog": true,
+    "cleanupEnabled": true,
+    "snapshotEnabled": true,
+    "repairEnabled": false,
+    "retentionOptions": {
+      "retentionPeriodNanos": 600000000000,
+      "blockSizeNanos": 300000000000,
+      "bufferFutureNanos": 60000000000,
+      "bufferPastNanos": 60000000000,
+      "blockDataExpiry": true,
+      "blockDataExpiryAfterNotAccessPeriodNanos": 300000000000
+    },
+    "indexOptions": {
+      "enabled": true,
+      "blockSizeNanos": 300000000000
     }
   }
 }'
 echo "Done initializing namespace"
+
+sleep 10
 
 echo "Validating namespace"
 [ "$(curl -sSf localhost:7201/api/v1/namespace | jq .registry.namespaces.prometheus_metrics.indexOptions.enabled)" == true ]
@@ -72,9 +102,13 @@ curl -vvvsSf -X POST localhost:7201/api/v1/placement/init -d '{
 }'
 echo "Done initializing topology"
 
+sleep 10
+
 echo "Validating topology"
 [ "$(curl -sSf localhost:7201/api/v1/placement | jq .placement.instances.m3db_seed.id)" == '"m3db_seed"' ]
 echo "Done validating topology"
+
+sleep 2
 
 echo "Prometheus available at localhost:9090"
 echo "Grafana available at localhost:3000"

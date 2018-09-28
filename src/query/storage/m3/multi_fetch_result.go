@@ -21,6 +21,7 @@
 package m3
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -120,6 +121,8 @@ func (r *multiFetchResult) dedupe(
 			idx = len(currentIters)
 			currentIters = append(currentIters, s)
 		} else {
+			fmt.Println(len(currentIters))
+			fmt.Println(existing.idx)
 			idx = existing.idx
 			currentIters[idx] = s
 		}
