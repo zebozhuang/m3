@@ -1,4 +1,3 @@
-// +build big
 //
 // Copyright (c) 2017 Uber Technologies, Inc.
 //
@@ -70,7 +69,7 @@ func TestCommitLogSourcePropCorrectlyBootstrapsFromCommitlog(t *testing.T) {
 			namespace.NewOptions().IndexOptions().SetEnabled(true),
 		)
 	)
-	parameters.MinSuccessfulTests = 80
+	parameters.MinSuccessfulTests = 40
 	parameters.Rng.Seed(seed)
 	nsMeta, err := namespace.NewMetadata(testNamespaceID, nsOpts)
 	require.NoError(t, err)

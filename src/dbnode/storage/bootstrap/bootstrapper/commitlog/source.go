@@ -1111,9 +1111,30 @@ func (s *commitLogSource) mergeSeries(
 	blockSize time.Duration,
 	blopts block.Options,
 ) (block.DatabaseSeriesBlocks, int, int) {
-	var seriesBlocks block.DatabaseSeriesBlocks
+	var seriesBlocks = snapshotData.Blocks
 	var numEmptyErrs int
 	var numErrs int
+
+	// if snapshotData.Blocks != nil {
+	// 	allSnapshotBlocks := snapshotData.Blocks.AllBlocks()
+	// 	for startNano, snapshotBlock := range allSnapshotBlocks {
+	// 		// if seriesBlocks == nil {
+	// 		// 	seriesBlocks = block.NewDatabaseSeriesBlocks(len(allSnapshotBlocks))
+	// 		// }
+	// 		// _, ok := seriesBlocks.BlockAt(startNano.ToTime())
+	// 		// if ok {
+	// 		// 	// Should never happen because we would have called
+	// 		// 	// Blocks.RemoveBlockAt() above.
+	// 		// 	iOpts := s.opts.CommitLogOptions().InstrumentOptions()
+	// 		// 	invariantLogger := instrument.EmitInvariantViolationAndGetLogger(iOpts)
+	// 		// 	invariantLogger.Errorf(
+	// 		// 		"tried to merge block that should have been removed, blockStart: %d", startNano)
+	// 		// 	continue
+	// 		// }
+
+	// 		// seriesBlocks.AddBlock(snapshotBlock)
+	// 	}
+	// }
 
 	for startNano, encoders := range unmergedCommitlogBlocks.encoders {
 		var (
@@ -1133,7 +1154,7 @@ func (s *commitLogSource) mergeSeries(
 
 		// Closes encoders and snapshotBlock by calling Discard() on each.
 		readers, err := newIOReadersFromEncodersAndBlock(
-			segmentReaderPool, encoders, snapshotBlock)
+			segmentReaderPool, encoders, nil)
 		if err != nil {
 			numErrs++
 			continue
@@ -1164,11 +1185,6 @@ func (s *commitLogSource) mergeSeries(
 		// Automatically returns iter to the pool
 		iter.Close()
 		readers.close()
-		if hasSnapshotBlock {
-			// Block is already closed, but we need to remove from the Blocks
-			// to prevent a double free when we call Blocks.Close() later.
-			snapshotData.Blocks.RemoveBlockAt(start)
-		}
 
 		if err != nil {
 			continue
@@ -1179,29 +1195,14 @@ func (s *commitLogSource) mergeSeries(
 		if seriesBlocks == nil {
 			seriesBlocks = block.NewDatabaseSeriesBlocks(len(unmergedCommitlogBlocks.encoders))
 		}
-		seriesBlocks.AddBlock(pooledBlock)
-	}
 
-	if snapshotData.Blocks != nil {
-		allSnapshotBlocks := snapshotData.Blocks.AllBlocks()
-		for startNano, snapshotBlock := range snapshotData.Blocks.AllBlocks() {
-			if seriesBlocks == nil {
-				seriesBlocks = block.NewDatabaseSeriesBlocks(len(allSnapshotBlocks))
-			}
-			_, ok := seriesBlocks.BlockAt(startNano.ToTime())
-			if ok {
-				// Should never happen because we would have called
-				// Blocks.RemoveBlockAt() above.
-				iOpts := s.opts.CommitLogOptions().InstrumentOptions()
-				invariantLogger := instrument.EmitInvariantViolationAndGetLogger(iOpts)
-				invariantLogger.Errorf(
-					"tried to merge block that should have been removed, blockStart: %d", startNano)
-				continue
-			}
-
-			seriesBlocks.AddBlock(snapshotBlock)
+		if hasSnapshotBlock {
+			snapshotBlock.Merge(pooledBlock)
+		} else {
+			seriesBlocks.AddBlock(pooledBlock)
 		}
 	}
+
 	return seriesBlocks, numEmptyErrs, numErrs
 }
 
