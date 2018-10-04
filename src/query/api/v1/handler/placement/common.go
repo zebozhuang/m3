@@ -128,5 +128,6 @@ func RegisterRoutes(r *mux.Router, client clusterclient.Client, cfg config.Confi
 	r.HandleFunc(GetURL, logged(NewGetHandler(client, cfg)).ServeHTTP).Methods(GetHTTPMethod)
 	r.HandleFunc(DeleteAllURL, logged(NewDeleteAllHandler(client, cfg)).ServeHTTP).Methods(DeleteAllHTTPMethod)
 	r.HandleFunc(AddURL, logged(NewAddHandler(client, cfg)).ServeHTTP).Methods(AddHTTPMethod)
+	r.HandleFunc(AddReplicaURL, logged(NewAddReplicaHandler(client, cfg)).ServeHTTP).Methods(AddReplicaHTTPMethod)
 	r.HandleFunc(DeleteURL, logged(NewDeleteHandler(client, cfg)).ServeHTTP).Methods(DeleteHTTPMethod)
 }
