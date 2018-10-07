@@ -26,9 +26,9 @@ import (
 	"testing"
 
 	aggclient "github.com/m3db/m3aggregator/client"
-	aggserver "github.com/m3db/m3collector/integration/server"
-	"github.com/m3db/m3collector/reporter"
-	aggreporter "github.com/m3db/m3collector/reporter/m3aggregator"
+	aggserver "github.com/m3db/m3/src/collector/integration/server"
+	"github.com/m3db/m3/src/collector/reporter"
+	aggreporter "github.com/m3db/m3/src/collector/reporter/m3aggregator"
 	"github.com/m3db/m3metrics/matcher"
 	"github.com/m3db/m3metrics/matcher/cache"
 	"github.com/m3db/m3x/server"
