@@ -91,7 +91,8 @@ func TestFilesystemBootstrapIndexWithIndexingEnabled(t *testing.T) {
 		SetBootstrapProcessProvider(processProvider)
 
 	// Write test data
-	now := setup.getNowFn()
+	now := setup.getNowFn().Add(-40 * time.Minute)
+	setup.setNowFn(now)
 
 	fooSeries := generate.Series{
 		ID:   ident.StringID("foo"),

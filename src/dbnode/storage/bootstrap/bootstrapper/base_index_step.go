@@ -21,6 +21,8 @@
 package bootstrapper
 
 import (
+	"fmt"
+
 	"github.com/m3db/m3/src/dbnode/storage/bootstrap"
 	"github.com/m3db/m3/src/dbnode/storage/bootstrap/result"
 	"github.com/m3db/m3/src/dbnode/storage/namespace"
@@ -78,6 +80,12 @@ func (s *bootstrapIndex) runCurrStep(
 		logFields []xlog.Field
 		err       error
 	)
+	for _, tr := range targetRanges {
+		iter := tr.Iter()
+		for iter.Next() {
+			fmt.Println("base index: ", iter.Value())
+		}
+	}
 	s.currResult, err = s.curr.ReadIndex(s.namespace, targetRanges, s.opts)
 	if result := s.currResult; result != nil {
 		fulfilled = requested

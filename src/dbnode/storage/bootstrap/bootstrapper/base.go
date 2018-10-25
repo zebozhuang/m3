@@ -21,6 +21,7 @@
 package bootstrapper
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/m3db/m3/src/dbnode/storage/bootstrap"
@@ -102,6 +103,13 @@ func (b baseBootstrapper) BootstrapIndex(
 	if shardsTimeRanges.IsEmpty() {
 		return result.NewIndexBootstrapResult(), nil
 	}
+
+	for _, tr := range shardsTimeRanges {
+		iter := tr.Iter()
+		for iter.Next() {
+			fmt.Println("base bootstrapper: ", iter.Value())
+		}
+	}
 	step := newBootstrapIndexStep(namespace, b.src, b.next, opts)
 	err := b.runBootstrapStep(namespace, shardsTimeRanges, step)
 	if err != nil {
@@ -129,6 +137,10 @@ func (b baseBootstrapper) runBootstrapStep(
 	currRanges := prepareResult.currAvailable
 	nextRanges := totalRanges.Copy()
 	nextRanges.Subtract(currRanges)
+
+	fmt.Println("totalRanges: ", totalRanges)
+	fmt.Println("currRanges: ", currRanges)
+	fmt.Println("nextRanges: ", nextRanges)
 	if !nextRanges.IsEmpty() &&
 		b.Can(bootstrap.BootstrapParallel) &&
 		b.next.Can(bootstrap.BootstrapParallel) {

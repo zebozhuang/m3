@@ -21,6 +21,7 @@
 package bootstrap
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -217,7 +218,14 @@ func (b bootstrapProcess) bootstrapIndex(
 		b.logBootstrapRun(logFields)
 
 		begin := b.nowFn()
+		fmt.Println("wtf: ", target.Range)
 		shardsTimeRanges := b.newShardTimeRanges(target.Range, shards)
+		for _, tr := range shardsTimeRanges {
+			iter := tr.Iter()
+			for iter.Next() {
+				fmt.Println("HUH: ", iter.Value())
+			}
+		}
 		res, err := b.bootstrapper.BootstrapIndex(namespace,
 			shardsTimeRanges, target.RunOptions)
 

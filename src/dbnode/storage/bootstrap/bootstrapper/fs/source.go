@@ -155,6 +155,12 @@ func (s *fileSystemSource) ReadIndex(
 	shardsTimeRanges result.ShardTimeRanges,
 	runOpts bootstrap.RunOptions,
 ) (result.IndexBootstrapResult, error) {
+	for _, tr := range shardsTimeRanges {
+		iter := tr.Iter()
+		for iter.Next() {
+			fmt.Println("test: ", iter.Value())
+		}
+	}
 	r, err := s.read(md, shardsTimeRanges, bootstrapIndexRunType, runOpts)
 	if err != nil {
 		return nil, err
@@ -288,6 +294,8 @@ func (s *fileSystemSource) enqueueReadersGroupedByBlockSize(
 			shardReaders := s.newShardReaders(ns, readerPool, shard, tr)
 			readers[shardID(shard)] = shardReaders
 		}
+		fmt.Println("blocksize: ", blockSize)
+		fmt.Println("enqueing: ", group.ranges)
 		readersCh <- newTimeWindowReaders(group.ranges, readers)
 	}
 }
@@ -820,6 +828,11 @@ func (s *fileSystemSource) persistBootstrapIndexSegment(
 	requireFulfilled.Subtract(fulfilled)
 	exactStartEnd := min.Equal(blockStart) && max.Equal(blockStart.Add(blockSize))
 	if !exactStartEnd || !requireFulfilled.IsEmpty() {
+		fmt.Println("!exactStartEnd: ", !exactStartEnd)
+		fmt.Println("!requireFulfilled.IsEmpty(): ", !requireFulfilled.IsEmpty())
+		fmt.Println("min: ", min)
+		fmt.Println("max: ", max)
+		fmt.Println("blockStart: ", blockStart)
 		return fmt.Errorf("persistent fs index bootstrap invalid ranges to persist: expected=%v, actual=%v, fulfilled=%v",
 			expectedRanges.String(), requestedRanges.String(), fulfilled.String())
 	}
@@ -1262,13 +1275,16 @@ type shardTimeRangesTimeWindowGroup struct {
 	window xtime.Range
 }
 
-func newShardTimeRangesTimeWindowGroups(
+func 	(
 	shardTimeRanges result.ShardTimeRanges,
 	windowSize time.Duration,
 ) []shardTimeRangesTimeWindowGroup {
 	min, max := shardTimeRanges.MinMax()
 	estimate := int(math.Ceil(float64(max.Sub(min)) / float64(windowSize)))
 	grouped := make([]shardTimeRangesTimeWindowGroup, 0, estimate)
+	fmt.Println("in group min: ", min)
+	fmt.Println("in group blockSize: ", windowSize)
+	fmt.Println("in group min.Truncate(windowSize): ", min.Truncate(windowSize))
 	for t := min.Truncate(windowSize); t.Before(max); t = t.Add(windowSize) {
 		currRange := xtime.Range{
 			Start: t,
@@ -1282,9 +1298,13 @@ func newShardTimeRangesTimeWindowGroups(
 				evaluateRange := iter.Value()
 				intersection, intersects := evaluateRange.Intersect(currRange)
 				if !intersects {
+					fmt.Println("No intersection: ", currRange)
 					continue
 				}
 				// Add to this range
+				fmt.Println("evaluate: ", evaluateRange)
+				fmt.Println("curr range: ", currRange)
+				fmt.Println("adding range: ", intersection)
 				group[shard] = group[shard].AddRange(intersection)
 			}
 		}
