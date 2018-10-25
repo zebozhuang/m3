@@ -157,40 +157,7 @@ type MultiReaderIterator interface {
 // SeriesIterator is an iterator that iterates over a set of iterators from different replicas
 // and de-dupes & merges results from the replicas for a given series while also applying a time
 // filter on top of the values in case replicas returned values out of range on either end
-type SeriesIterator interface {
-	Iterator
-
-	// ID gets the ID of the series
-	ID() ident.ID
-
-	// Namespace gets the namespace of the series
-	Namespace() ident.ID
-
-	// Tags returns an iterator over the tags associated with the ID.
-	Tags() ident.TagIterator
-
-	// Start returns the start time filter specified for the iterator
-	Start() time.Time
-
-	// End returns the end time filter specified for the iterator
-	End() time.Time
-
-	// Reset resets the iterator to read from a set of iterators from different replicas, one
-	// must note that this can be an array with nil entries if some replicas did not return successfully.
-	// NB: the SeriesIterator assumes ownership of the provided ids, this includes calling `id.Finalize()` upon
-	// iter.Close().
-	Reset(opts SeriesIteratorOptions)
-
-	// SetIterateEqualTimestampStrategy sets the equal timestamp strategy of how
-	// to select a value when the timestamp matches differing values with the same
-	// timestamp from different replicas.
-	// It can be set at any time and will apply to the current value returned
-	// from the iterator immediately.
-	SetIterateEqualTimestampStrategy(strategy IterateEqualTimestampStrategy)
-
-	// Replicas exposes the underlying MultiReaderIterator slice for this SeriesIterator
-	Replicas() []MultiReaderIterator
-}
+type SeriesIterator = *seriesIterator
 
 // SeriesIteratorOptions is a set of options for using a series iterator.
 type SeriesIteratorOptions struct {
@@ -279,16 +246,7 @@ type EncoderPool interface {
 }
 
 // ReaderIteratorPool provides a pool for ReaderIterators
-type ReaderIteratorPool interface {
-	// Init initializes the pool.
-	Init(alloc ReaderIteratorAllocate)
-
-	// Get provides a ReaderIterator from the pool
-	Get() ReaderIterator
-
-	// Put returns a ReaderIterator to the pool
-	Put(iter ReaderIterator)
-}
+type ReaderIteratorPool = *readerIteratorPool
 
 // MultiReaderIteratorPool provides a pool for MultiReaderIterators
 type MultiReaderIteratorPool interface {
@@ -303,16 +261,7 @@ type MultiReaderIteratorPool interface {
 }
 
 // SeriesIteratorPool provides a pool for SeriesIterator
-type SeriesIteratorPool interface {
-	// Init initializes the pool
-	Init()
-
-	// Get provides a SeriesIterator from the pool
-	Get() SeriesIterator
-
-	// Put returns a SeriesIterator to the pool
-	Put(iter SeriesIterator)
-}
+type SeriesIteratorPool = *seriesIteratorPool
 
 // MutableSeriesIteratorsPool provides a pool for MutableSeriesIterators
 type MutableSeriesIteratorsPool interface {

@@ -208,8 +208,7 @@ func newTestSeriesIterator(
 		Replicas:       iters,
 	}, nil)
 
-	seriesIter, ok := iter.(*seriesIterator)
-	require.True(t, ok)
+	seriesIter := iter
 
 	return newTestSeriesIteratorResult{
 		iter:                 seriesIter,
