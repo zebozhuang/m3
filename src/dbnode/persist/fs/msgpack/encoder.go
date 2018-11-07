@@ -325,13 +325,25 @@ func EncodeLogEntryFast(b []byte, entry schema.LogEntry) ([]byte, error) {
 	if logEntryHeaderErr != nil {
 		return nil, logEntryHeaderErr
 	}
+
 	b = append(b, logEntryHeader...)
+
 	b = encodeVarUint64(b, entry.Index)
+	// write8(b, codes.Uint64, entry.Index)
+
 	b = encodeVarInt64(b, entry.Create)
+	// write8(b, codes.Int64, uint64(entry.Create))
+
 	b = encodeBytes(b, entry.Metadata)
+
 	b = encodeVarInt64(b, entry.Timestamp)
+	// write8(b, codes.Int64, uint64(entry.Timestamp))
+
 	b = encodeFloat64(b, entry.Value)
+
 	b = encodeVarUint64(b, uint64(entry.Unit))
+	// write8(b, codes.Uint64, uint64(entry.Unit))
+
 	b = encodeBytes(b, entry.Annotation)
 	return b, nil
 }
@@ -343,21 +355,93 @@ func encodeVarUint64(b []byte, v uint64) []byte {
 		return b
 	}
 	if v <= math.MaxUint8 {
-		return write1(b, codes.Uint8, v)
+		// return write1(b, codes.Uint8, v)
+		b, buf := growAndReturn(b, 2)
+		buf[0] = codes.Uint8
+		buf[1] = byte(v)
+		return b
 	}
 	if v <= math.MaxUint16 {
-		return write2(b, codes.Uint16, v)
+		// return write2(b, codes.Uint16, v)
+		b, buf := growAndReturn(b, 3)
+		buf[0] = codes.Uint16
+		buf[1] = byte(v >> 8)
+		buf[2] = byte(v)
+		return b
 	}
 	if v <= math.MaxUint32 {
-		return write4(b, codes.Uint32, v)
+		// return write4(b, codes.Uint32, v)
+		b, buf := growAndReturn(b, 5)
+		buf[0] = codes.Uint32
+		buf[1] = byte(v >> 24)
+		buf[2] = byte(v >> 16)
+		buf[3] = byte(v >> 8)
+		buf[4] = byte(v)
+		return b
 	}
-	return write8(b, codes.Uint64, v)
+
+	// return write8(b, codes.Uint64, v)
+	b, buf := growAndReturn(b, 9)
+	buf[0] = codes.Uint64
+	buf[1] = byte(v >> 56)
+	buf[2] = byte(v >> 48)
+	buf[3] = byte(v >> 40)
+	buf[4] = byte(v >> 32)
+	buf[5] = byte(v >> 24)
+	buf[6] = byte(v >> 16)
+	buf[7] = byte(v >> 8)
+	buf[8] = byte(v)
+	return b
 }
 
 func encodeVarInt64(b []byte, v int64) []byte {
 	if v >= 0 {
-		return encodeVarUint64(b, uint64(v))
+		// return encodeVarUint64(b, uint64(v))
+		if v <= math.MaxInt8 {
+			b, buf := growAndReturn(b, 1)
+			buf[0] = byte(v)
+			return b
+		}
+		if v <= math.MaxUint8 {
+			// return write1(b, codes.Uint8, v)
+			b, buf := growAndReturn(b, 2)
+			buf[0] = codes.Uint8
+			buf[1] = byte(v)
+			return b
+		}
+		if v <= math.MaxUint16 {
+			// return write2(b, codes.Uint16, v)
+			b, buf := growAndReturn(b, 3)
+			buf[0] = codes.Uint16
+			buf[1] = byte(v >> 8)
+			buf[2] = byte(v)
+			return b
+		}
+		if v <= math.MaxUint32 {
+			// return write4(b, codes.Uint32, v)
+			b, buf := growAndReturn(b, 5)
+			buf[0] = codes.Uint32
+			buf[1] = byte(v >> 24)
+			buf[2] = byte(v >> 16)
+			buf[3] = byte(v >> 8)
+			buf[4] = byte(v)
+			return b
+		}
+
+		// return write8(b, codes.Uint64, v)
+		b, buf := growAndReturn(b, 9)
+		buf[0] = codes.Uint64
+		buf[1] = byte(v >> 56)
+		buf[2] = byte(v >> 48)
+		buf[3] = byte(v >> 40)
+		buf[4] = byte(v >> 32)
+		buf[5] = byte(v >> 24)
+		buf[6] = byte(v >> 16)
+		buf[7] = byte(v >> 8)
+		buf[8] = byte(v)
+		return b
 	}
+
 	if v >= int64(int8(codes.NegFixedNumLow)) {
 		b, buff := growAndReturn(b, 1)
 		buff[0] = byte(v)
