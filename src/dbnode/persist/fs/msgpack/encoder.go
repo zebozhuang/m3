@@ -459,8 +459,20 @@ func encodeVarInt64(b []byte, v int64) []byte {
 	return write8(b, codes.Int64, uint64(v))
 }
 
-func encodeFloat64(b []byte, n float64) []byte {
-	return write8(b, codes.Double, math.Float64bits(n))
+func encodeFloat64(b []byte, v float64) []byte {
+	// return write8(b, codes.Double, math.Float64bits(n))
+	b, buf := growAndReturn(b, 9)
+	buf[0] = codes.Double
+	n := math.Float64bits(v)
+	buf[1] = byte(n >> 56)
+	buf[2] = byte(n >> 48)
+	buf[3] = byte(n >> 40)
+	buf[4] = byte(n >> 32)
+	buf[5] = byte(n >> 24)
+	buf[6] = byte(n >> 16)
+	buf[7] = byte(n >> 8)
+	buf[8] = byte(n)
+	return b
 }
 
 func encodeBytes(b []byte, data []byte) []byte {
@@ -469,7 +481,31 @@ func encodeBytes(b []byte, data []byte) []byte {
 		buf[0] = codes.Nil
 		return b
 	}
-	b = encodeBytesLen(b, len(data))
+	// b = encodeBytesLen(b, len(data))
+	var (
+		l   = len(data)
+		v   = uint64(l)
+		buf []byte
+	)
+	if l < 256 {
+		b, buf = growAndReturn(b, 2)
+		buf[0] = codes.Bin8
+		buf[1] = byte(uint64(l))
+	} else if l < 65536 {
+		b, buf = growAndReturn(b, 3)
+		buf[0] = codes.Bin16
+		buf[1] = byte(v >> 8)
+		buf[2] = byte(v)
+		return b
+	} else {
+		b, buf = growAndReturn(b, 5)
+		buf[0] = codes.Bin32
+		buf[1] = byte(v >> 24)
+		buf[2] = byte(v >> 16)
+		buf[3] = byte(v >> 8)
+		buf[4] = byte(v)
+	}
+
 	b = append(b, data...)
 	return b
 }
