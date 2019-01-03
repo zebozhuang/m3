@@ -21,16 +21,21 @@
 package compaction
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/m3db/m3/src/m3ninx/doc"
+	"github.com/m3db/m3/src/m3ninx/index"
 	"github.com/m3db/m3/src/m3ninx/index/segment"
 	"github.com/m3db/m3/src/m3ninx/index/segment/builder"
 	"github.com/m3db/m3/src/m3ninx/index/segment/fst"
 	"github.com/m3db/m3/src/m3ninx/index/segment/mem"
 	"github.com/m3db/m3x/pool"
 
+	"github.com/pkg/profile"
 	"github.com/stretchr/testify/require"
 )
 
@@ -160,6 +165,54 @@ func TestCompactorCompactDuplicateIDsNoError(t *testing.T) {
 	assertContents(t, compacted, testDocuments)
 
 	require.NoError(t, compactor.Close())
+}
+
+func TestCompactorDebug(t *testing.T) {
+	compactor, err := NewCompactor(testDocsPool, testDocsMaxBatch,
+		testBuilderSegmentOptions, testFSTSegmentOptions)
+	require.NoError(t, err)
+
+	debugFiles := []string{
+		"/tmp/debug-seg0.json",
+		"/tmp/debug-seg1.json",
+	}
+
+	var debugSegments []segment.Segment
+	for _, file := range debugFiles {
+		seg, err := mem.NewSegment(0, testMemSegmentOptions)
+		require.NoError(t, err)
+
+		file, err := os.Open(file)
+		require.NoError(t, err)
+
+		defer file.Close()
+
+		decoder := json.NewDecoder(file)
+
+		var docs []doc.Document
+		require.NoError(t, decoder.Decode(&docs))
+
+		require.NoError(t, seg.InsertBatch(index.Batch{
+			Docs: docs,
+		}))
+
+		require.NoError(t, seg.Seal())
+
+		compacted, err := compactor.CompactUsingBuilder(seg, nil)
+		require.NoError(t, err)
+
+		debugSegments = append(debugSegments, compacted)
+	}
+
+	if strings.ToLower(os.Getenv("PROFILE_CPU")) == "true" {
+		p := profile.Start(profile.CPUProfile)
+		defer p.Stop()
+	}
+
+	final, err := compactor.Compact(debugSegments)
+	require.NoError(t, err)
+	require.NotNil(t, final)
+	fmt.Printf("final size: %d\n", final.Size())
 }
 
 func assertContents(t *testing.T, seg segment.Segment, docs []doc.Document) {
