@@ -490,6 +490,42 @@
           
 
 
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-4-2" type="checkbox" id="nav-4-2">
+    
+    <label class="md-nav__link" for="nav-4-2">
+      API
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="2">
+      <label class="md-nav__title" for="nav-4-2">
+        API
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../query_engine/api/" title="Query" class="md-nav__link">
+      Query
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
   <li class="md-nav__item">
     <a href="../../query_engine/roadmap/" title="Roadmap" class="md-nav__link">
       Roadmap
@@ -504,13 +540,13 @@
 
   <li class="md-nav__item md-nav__item--nested">
     
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-4-3" type="checkbox" id="nav-4-3">
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-4-4" type="checkbox" id="nav-4-4">
     
-    <label class="md-nav__link" for="nav-4-3">
+    <label class="md-nav__link" for="nav-4-4">
       Architecture
     </label>
     <nav class="md-nav" data-md-component="collapsible" data-md-level="2">
-      <label class="md-nav__title" for="nav-4-3">
+      <label class="md-nav__title" for="nav-4-4">
         Architecture
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
@@ -617,6 +653,18 @@
   </li>
 
         
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../how_to/query/" title="M3Query" class="md-nav__link">
+      M3Query
+    </a>
+  </li>
+
+        
       </ul>
     </nav>
   </li>
@@ -701,6 +749,18 @@
   </li>
 
         
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../operational_guide/etcd/" title="etcd" class="md-nav__link">
+      etcd
+    </a>
+  </li>
+
+        
       </ul>
     </nav>
   </li>
@@ -773,6 +833,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#querying-with-grafana" title="Querying With Grafana" class="md-nav__link">
+    Querying With Grafana
+  </a>
+  
+</li>
+      
       
       
       
@@ -781,6 +848,30 @@
   
 </nav>
     
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../graphite/" title="Graphite" class="md-nav__link">
+      Graphite
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../grafana/" title="Grafana" class="md-nav__link">
+      Grafana
+    </a>
   </li>
 
         
@@ -847,6 +938,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#querying-with-grafana" title="Querying With Grafana" class="md-nav__link">
+    Querying With Grafana
+  </a>
+  
+</li>
+      
       
       
       
@@ -871,7 +969,7 @@
 <h2 id="m3-coordinator-configuration">M3 Coordinator configuration</h2>
 <p>To write to a remote M3DB cluster the simplest configuration is to run <code>m3coordinator</code> as a sidecar alongside Prometheus.</p>
 <p>Start by downloading the <a href="https://github.com/m3db/m3/blob/master/src/query/config/m3coordinator-cluster-template.yml">config template</a>. Update the <code>namespaces</code> and the <code>client</code> section for a new cluster to match your cluster's configuration.</p>
-<p>You'll need to specify the static IPs or hostnames of your M3DB seed nodes, and the name and retention values of the namespace you set up.  You can leave the namespace storage metrics type as <code>unaggregated</code> since it's required by default to have a cluster that receives all Prometheus metrics unaggregated.  In the future you might also want to aggregate and downsample metrics for longer retention, and you can come back and update the config once you've setup those clusters.</p>
+<p>You'll need to specify the static IPs or hostnames of your M3DB seed nodes, and the name and retention values of the namespace you set up.  You can leave the namespace storage metrics type as <code>unaggregated</code> since it's required by default to have a cluster that receives all Prometheus metrics unaggregated.  In the future you might also want to aggregate and downsample metrics for longer retention, and you can come back and update the config once you've setup those clusters. You can read more about our aggregation functionality <a href="../../how_to/query/">here</a>.</p>
 <p>It should look something like:</p>
 <pre><code>listenAddress:
   type: &quot;config&quot;
@@ -945,6 +1043,25 @@ docker run -p 7201:7201 --name m3coordinator -v &lt;config-name.yml&gt;:/etc/m3c
 remote_write:
   - url: &quot;http://localhost:7201/api/v1/prom/remote/write&quot;
 </code></pre>
+
+<p>Also, we recommend adding <code>M3DB</code> and <code>M3Coordinator</code>/<code>M3Query</code> to your list of jobs under <code>scrape_configs</code> so that you can monitor them using Prometheus. With this scraping setup, you can also use our pre-configured <a href="https://grafana.com/dashboards/8126">M3DB Grafana dashboard</a>.</p>
+<pre><code class="json">- job_name: 'm3db'
+  static_configs:
+    - targets: ['&lt;M3DB_HOST_NAME_1&gt;:7203', '&lt;M3DB_HOST_NAME_2&gt;:7203', '&lt;M3DB_HOST_NAME_3&gt;:7203']
+- job_name: 'm3coordinator'
+  static_configs:
+    - targets: ['&lt;M3COORDINATOR_HOST_NAME_1&gt;:7203']
+</code></pre>
+
+<p><strong>NOTE:</strong> If you are running <code>M3DB</code> with embedded <code>M3Coordinator</code>, you should only have one job. We recommend just calling this job <code>m3</code>. For example:</p>
+<pre><code class="json">- job_name: 'm3'
+  static_configs:
+    - targets: ['&lt;HOST_NAME&gt;:7203']
+</code></pre>
+
+<h2 id="querying-with-grafana">Querying With Grafana</h2>
+<p>When using the Prometheus integration with Grafana, there are two different ways you can query for your metrics. The first option is to configure Grafana to query Prometheus directly by following <a href="http://docs.grafana.org/features/datasources/prometheus/">these instructions.</a></p>
+<p>Alternatively, you can configure Grafana to read metrics directly from <code>M3Coordinator</code> in which case you will bypass Prometheus entirely and use M3's <code>PromQL</code> engine instead. To set this up, follow the same instructions from the previous step, but set the <code>url</code> to: <code>http://&lt;M3_COORDINATOR_HOST_NAME&gt;:7201</code>.</p>
                 
                   
                 
@@ -965,7 +1082,7 @@ remote_write:
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid">
         
-          <a href="../../operational_guide/kernel_configuration/" title="Kernel Configuration" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../../operational_guide/etcd/" title="etcd" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-flex__cell md-flex__cell--shrink">
               <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
             </div>
@@ -974,19 +1091,19 @@ remote_write:
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Kernel Configuration
+                etcd
               </span>
             </div>
           </a>
         
         
-          <a href="../../troubleshooting/" title="Troubleshooting" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../graphite/" title="Graphite" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
               <span class="md-flex__ellipsis">
                 <span class="md-footer-nav__direction">
                   Next
                 </span>
-                Troubleshooting
+                Graphite
               </span>
             </div>
             <div class="md-flex__cell md-flex__cell--shrink">

@@ -490,6 +490,42 @@
           
 
 
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-4-2" type="checkbox" id="nav-4-2">
+    
+    <label class="md-nav__link" for="nav-4-2">
+      API
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="2">
+      <label class="md-nav__title" for="nav-4-2">
+        API
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../query_engine/api/" title="Query" class="md-nav__link">
+      Query
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
   <li class="md-nav__item">
     <a href="../../query_engine/roadmap/" title="Roadmap" class="md-nav__link">
       Roadmap
@@ -504,13 +540,13 @@
 
   <li class="md-nav__item md-nav__item--nested">
     
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-4-3" type="checkbox" id="nav-4-3">
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-4-4" type="checkbox" id="nav-4-4">
     
-    <label class="md-nav__link" for="nav-4-3">
+    <label class="md-nav__link" for="nav-4-4">
       Architecture
     </label>
     <nav class="md-nav" data-md-component="collapsible" data-md-level="2">
-      <label class="md-nav__title" for="nav-4-3">
+      <label class="md-nav__title" for="nav-4-4">
         Architecture
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
@@ -597,38 +633,9 @@
       
     
     
-      <label class="md-nav__link md-nav__link--active" for="toc">
-        M3DB Single Node Deployment
-      </label>
-    
     <a href="./" title="M3DB Single Node Deployment" class="md-nav__link md-nav__link--active">
       M3DB Single Node Deployment
     </a>
-    
-      
-<nav class="md-nav md-nav--secondary">
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="toc">Table of contents</label>
-    <ul class="md-nav__list" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#integrations" title="Integrations" class="md-nav__link">
-    Integrations
-  </a>
-  
-</li>
-      
-      
-      
-      
-      
-    </ul>
-  
-</nav>
     
   </li>
 
@@ -653,6 +660,18 @@
   <li class="md-nav__item">
     <a href="../kubernetes/" title="M3DB on Kubernetes" class="md-nav__link">
       M3DB on Kubernetes
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../query/" title="M3Query" class="md-nav__link">
+      M3Query
     </a>
   </li>
 
@@ -741,6 +760,18 @@
   </li>
 
         
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../operational_guide/etcd/" title="etcd" class="md-nav__link">
+      etcd
+    </a>
+  </li>
+
+        
       </ul>
     </nav>
   </li>
@@ -773,6 +804,30 @@
   <li class="md-nav__item">
     <a href="../../integrations/prometheus/" title="Prometheus" class="md-nav__link">
       Prometheus
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../integrations/graphite/" title="Graphite" class="md-nav__link">
+      Graphite
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../integrations/grafana/" title="Grafana" class="md-nav__link">
+      Grafana
     </a>
   </li>
 
@@ -823,22 +878,6 @@
     
   
   
-    <label class="md-nav__title" for="toc">Table of contents</label>
-    <ul class="md-nav__list" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#integrations" title="Integrations" class="md-nav__link">
-    Integrations
-  </a>
-  
-</li>
-      
-      
-      
-      
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -863,22 +902,14 @@ containing:</p>
 <li>A "coordinator" instance (<code>m3coordinator</code>) for writing and querying tagged metrics, as well as
   managing cluster topology and runtime configuration.</li>
 </ul>
-<p>To begin, first start up a Docker container with port <code>7201</code> (used to manage the cluster topology)
-and port <code>9003</code> (used to read and write metrics) exposed. We recommend you create a persistent data
+<p>To begin, first start up a Docker container with port <code>7201</code> (used to manage the cluster topology), port <code>7203</code> which is where Prometheus scrapes metrics produced by <code>M3DB</code> and <code>M3Coordinator</code>, and port <code>9003</code> (used to read and write metrics) exposed. We recommend you create a persistent data
 directory on your host for durability:</p>
 <pre><code>docker pull quay.io/m3/m3dbnode:latest
-docker run -p 7201:7201 -p 9003:9003 --name m3db -v $(pwd)/m3db_data:/var/lib/m3db quay.io/m3/m3dbnode:latest
+docker run -p 7201:7201 -p 7203:7203 -p 9003:9003 --name m3db -v $(pwd)/m3db_data:/var/lib/m3db -v &lt;PATH_TO_M3DB_CONFIG.yml&gt;:/etc/m3dbnode/m3dbnode.yml quay.io/m3/m3dbnode:latest
 </code></pre>
 
-<!-- TODO: link to docs containing explanations of what namespaces, the coordinator,
-placements, etc. are -->
-
-<!-- TODO: add something about how this is in no way a recommended production deployment guide,
-and write a guide for what is considered a production-ready deployment (this is in the works) -->
-
-<p>Next, create an initial namespace for your metrics in the database:</p>
-<!-- TODO: link to config reference docs once available -->
-
+<p><strong>Note:</strong> For the single node case, we recommend that you start with this <a href="https://github.com/m3db/m3/blob/master/src/dbnode/config/m3dbnode-local-etcd.yml">sample config file</a>. If you inspect the file, you'll see that all the configuration is namespaced by <code>coordinator</code> or <code>db</code>. That's because this setup runs <code>M3DB</code> and <code>M3Coordinator</code> as one application. While this is convenient for testing and development, you'll want to run clustered <code>M3DB</code> with a separate <code>M3Coordinator</code> in production. You can read more about that <a href="../cluster_hard_way/">here.</a>.</p>
+<p>Next, create an initial namespace for your metrics in the database using the cURL below. Keep in mind that the provided <code>namespaceName</code> must match the namespace in the <code>local</code> section of the <code>M3Coordinator</code> YAML configuration, and if you choose to <a href="../../operational_guide/namespace_configuration/">add any additional namespaces</a> you'll need to add them to the <code>local</code> section of <code>M3Coordinator</code>'s YAML config as well.</p>
 <pre><code class="json">curl -X POST http://localhost:7201/api/v1/database/create -d '{
   &quot;type&quot;: &quot;local&quot;,
   &quot;namespaceName&quot;: &quot;default&quot;,
@@ -886,8 +917,8 @@ and write a guide for what is considered a production-ready deployment (this is 
 }'
 </code></pre>
 
-<p>Shortly after, you should see your node complete bootstrapping! Don't worry if you see warnings or
-errors related to a local cache file, such as <code>[W] could not load cache from file
+<p><strong>Note</strong>: The <code>api/v1/database/create</code> endpoint is abstraction over two concepts in M3DB called <a href="../../operational_guide/placement/">placements</a> and <a href="../../operational_guide/namespace_configuration/">namespaces</a>. If a placement doesn't exist, it will create one based on the <code>type</code> argument, otherwise if the placement already exists, it just creates the specified namespace. For now it's enough to just understand that it creates M3DB namespaces (tables), but if you're going to run a clustered M3 setup in production, make sure you familiarize yourself with the links above.</p>
+<p>Shortly after, you should see your node complete bootstrapping! Don't worry if you see warnings or errors related to a local cache file, such as <code>[W] could not load cache from file
 /var/lib/m3kv/m3db_embedded.json</code>. Those are expected for a local instance and in general any
 warn-level errors (prefixed with <code>[W]</code>) should not block bootstrapping.</p>
 <pre><code>02:28:30.008072[I] updating database namespaces [{adds [default]} {updates []} {removals []}]
@@ -963,8 +994,7 @@ going to <code>localhost:7201/api/v1/openapi</code> in your browser.</p>
 }
 </code></pre>
 
-<h2 id="integrations">Integrations</h2>
-<p><a href="../../integrations/prometheus/">Prometheus as a long term storage remote read/write endpoint</a>.</p>
+<p>Now that you've got the M3 stack up and running, take a look at the rest of our documentation to see how you can integrate with <a href="../../integrations/prometheus/">Prometheus</a> and <a href="../../integrations/graphite/">Graphite</a></p>
                 
                   
                 
