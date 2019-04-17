@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	defaultBitmapContainerPooling = 128
+	defaultBitmapContainerPooling = 6
 )
 
 var (
