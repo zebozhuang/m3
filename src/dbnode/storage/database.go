@@ -98,8 +98,9 @@ type db struct {
 
 	commitLog commitlog.CommitLog
 
-	state    databaseState
-	mediator databaseMediator
+	state            databaseState
+	mediator         databaseMediator
+	repairSessionMgr *repairSessionManager
 
 	created    uint64
 	bootstraps int
@@ -182,6 +183,7 @@ func NewDatabase(
 		log:                   logger,
 		writeBatchPool:        opts.WriteBatchPool(),
 	}
+	d.repairSessionMgr = newRepairSessionManager(d)
 
 	databaseIOpts := iopts.SetMetricsScope(scope)
 
@@ -534,6 +536,11 @@ func (d *db) terminateWithLock() error {
 		return err
 	}
 
+	// close the repair session manager
+	if err := d.repairSessionMgr.Close(); err != nil {
+		return err
+	}
+
 	// stop listening for namespace changes
 	if err := d.nsWatch.Close(); err != nil {
 		return err
@@ -741,6 +748,20 @@ func (d *db) writeBatch(
 			writes.SetSkipWrite(i)
 		}
 	}
+
+	// Track changes for active repair sessions
+	for _, session := range d.repairSessionMgr.Sessions() {
+		// Need to be able to work out which session owns which shards
+		// and only append to the repair session
+
+		// TODO(r): what happens when a node gets assigned new shards?
+		// > probably needs to create a new repair session just for those
+		// new shards OR restart the whole repair session again...
+		// either way lag will be bad, although if create independent
+		// repair session for those shards then it only affects lag for
+		// the new shards
+	}
+
 	if !n.Options().WritesToCommitLog() {
 		// Finalize here because we can't rely on the commitlog to do it since
 		// we're not using it.
@@ -909,6 +930,10 @@ func (d *db) IsBootstrappedAndDurable() bool {
 
 func (d *db) Repair() error {
 	return d.mediator.Repair()
+}
+
+func (d *db) StartRepairSession(id ident.ID) error {
+	return d.repairSessionMgr.StartSession(id)
 }
 
 func (d *db) Truncate(namespace ident.ID) (int64, error) {

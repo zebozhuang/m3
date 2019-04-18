@@ -203,6 +203,9 @@ type Database interface {
 	// Repair will issue a repair and return nil on success or error on error.
 	Repair() error
 
+	// StartRepairSession starts a new repair session.
+	StartRepairSession(id ident.ID) error
+
 	// Truncate truncates data for the given namespace.
 	Truncate(namespace ident.ID) (int64, error)
 
@@ -660,6 +663,18 @@ type databaseRepairer interface {
 
 	// Report reports runtime information.
 	Report()
+}
+
+// databaseRepairSessionManager is a registry of all active
+// repair session
+type databaseRepairSessionManager interface {
+	StartSession(id ident.ID) error
+	Sessions() []databaseRepairSession
+	Close() error
+}
+
+type databaseRepairSession interface {
+	// need a "AddChanges" or similar method
 }
 
 // databaseTickManager performs periodic ticking.

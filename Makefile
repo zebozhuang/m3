@@ -146,6 +146,7 @@ install-tools: install-retool
 	retool sync
 	retool build
 
+	# TODO(r): Can we just always reference the `mockgen` binary in the retool directory instead of this hack?
 	@# NB(r): to ensure correct version of mock-gen is present we match the version
 	@# of the retool installed mockgen, and if not a match in binary contents, then
 	@# we explicitly install at the version we desire.
