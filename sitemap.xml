@@ -12,19 +12,19 @@
     
         
     <url>
-     <loc>/introduction/components/components/</loc>
+     <loc>/overview/components/</loc>
      <lastmod>2019-04-19</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
-     <loc>/introduction/motivation/motivation/</loc>
+     <loc>/overview/motivation/</loc>
      <lastmod>2019-04-19</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
-     <loc>/introduction/media/media/</loc>
+     <loc>/overview/media/</loc>
      <lastmod>2019-04-19</lastmod>
      <changefreq>daily</changefreq>
     </url>
@@ -216,6 +216,14 @@
     
     <url>
      <loc>/faqs/</loc>
+     <lastmod>2019-04-19</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    
+
+    
+    <url>
+     <loc>/misc/writing_docs/</loc>
      <lastmod>2019-04-19</lastmod>
      <changefreq>daily</changefreq>
     </url>
