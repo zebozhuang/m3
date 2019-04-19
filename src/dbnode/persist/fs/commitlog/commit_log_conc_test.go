@@ -1,4 +1,3 @@
-// +build big
 //
 // Copyright (c) 2018 Uber Technologies, Inc.
 //
@@ -109,7 +108,9 @@ func TestCommitLogActiveLogsConcurrency(t *testing.T) {
 			if err != nil {
 				panic(err)
 			}
-			require.Equal(t, 1, len(logs))
+			if len(logs) != 2 {
+				panic("expected two log files")
+			}
 			if logs[0].FilePath != lastSeenFile {
 				lastSeenFile = logs[0].FilePath
 				numFilesSeen++
