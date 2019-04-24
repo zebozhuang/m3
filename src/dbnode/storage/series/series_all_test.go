@@ -80,7 +80,10 @@ func decodedValues(results [][]xio.BlockReader, opts Options) ([]decodedValue, e
 	var all []decodedValue
 	for iter.Next() {
 		dp, unit, annotation := iter.Current()
-		all = append(all, decodedValue{dp.Timestamp, dp.Value, unit, annotation})
+		// @Haijun need to clone annotation byte slice since it will be reused
+		// by the iterator.
+		annotationCopy := append([]byte(nil), annotation...)
+		all = append(all, decodedValue{dp.Timestamp, dp.Value, unit, annotationCopy})
 	}
 	if err := iter.Err(); err != nil {
 		return nil, err
@@ -97,11 +100,15 @@ func assertValuesEqual(t *testing.T, values []value, results [][]xio.BlockReader
 	for i := 0; i < len(decodedValues); i++ {
 		m := dynamic.NewMessage(testSchema)
 		require.NoError(t, m.Unmarshal(decodedValues[i].annotation))
-		fmt.Println(m.String())
+		fmt.Println("annotation:", decodedValues[i].annotation)
+		fmt.Println("protobufMessage:", m.String())
 
 		require.True(t, values[i].timestamp.Equal(decodedValues[i].timestamp))
 		require.Equal(t, values[i].value, decodedValues[i].value)
 		require.Equal(t, values[i].unit, decodedValues[i].unit)
+		// @Haijun This assert is flaky since protobuf marshaling is not deterministic
+		// (Fields dont have to be marshaled inorder since its just a stream of key/value
+		// pairs.) You'll need to actually decode the message and make sure it looks right.
 		require.Equal(t, values[i].annotation, decodedValues[i].annotation)
 	}
 }

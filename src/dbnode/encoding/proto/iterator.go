@@ -187,6 +187,7 @@ func (it *iterator) Next() bool {
 			// no longer exist would still be returned.
 			it.lastIterated = dynamic.NewMessage(it.schema)
 		}
+
 	}
 
 	_, done, err := it.tsIterator.ReadTimestamp(it.stream)
@@ -222,6 +223,7 @@ func (it *iterator) Next() bool {
 	}
 
 	it.consumedFirstMessage = true
+
 	return it.hasNext()
 }
 

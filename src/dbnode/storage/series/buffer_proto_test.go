@@ -15,7 +15,6 @@ import (
 	"github.com/jhump/protoreflect/desc/protoparse"
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/m3db/m3/src/x/pool"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -61,7 +60,11 @@ func newBufferTestProtoOptions() Options {
 			SetBufferPast(10 * time.Second)).
 		SetDatabaseBlockOptions(opts.DatabaseBlockOptions().
 			SetContextPool(opts.ContextPool()).
-			SetEncoderPool(opts.EncoderPool()))
+			SetEncoderPool(opts.EncoderPool()).
+			// @Haijun unfortunately this is the pool that actually gets used by the buffer :/
+			// I may open a P.R soon to try and make it so the buffer only has access to the multiiterator
+			// from one location.
+			SetMultiReaderIteratorPool(multiReaderIteratorPool))
 	return opts
 }
 
@@ -143,6 +146,8 @@ func TestBufferProtoWriteRead(t *testing.T) {
 		protoBytes, err := newMessage(protoData[i]).Marshal()
 		require.NoError(t, err)
 		data[i] = value{
+			// @Haijun always write "0" value because protobuf will ignore it and always
+			// return "0" anyways.
 			curr.Add(time.Duration(i) * time.Second), 0, xtime.Second, protoBytes}
 	}
 
@@ -154,8 +159,9 @@ func TestBufferProtoWriteRead(t *testing.T) {
 	defer ctx.Close()
 
 	results, err := buffer.ReadEncoded(ctx, timeZero, timeDistantFuture)
-	assert.NoError(t, err)
-	assert.NotNil(t, results)
+	require.NoError(t, err)
+	require.NotNil(t, results)
+	require.Len(t, results, 1)
 
 	assertValuesEqual(t, data, results, opts)
 }
