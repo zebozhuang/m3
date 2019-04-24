@@ -21,13 +21,16 @@
 package series
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/jhump/protoreflect/dynamic"
 	"github.com/m3db/m3/src/dbnode/x/xio"
 	xtime "github.com/m3db/m3/src/x/time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var timeDistantFuture = time.Now().Add(10 * 365 * 24 * time.Hour)
@@ -89,13 +92,17 @@ func decodedValues(results [][]xio.BlockReader, opts Options) ([]decodedValue, e
 func assertValuesEqual(t *testing.T, values []value, results [][]xio.BlockReader, opts Options) {
 	decodedValues, err := decodedValues(results, opts)
 
-	assert.NoError(t, err)
-	assert.Len(t, decodedValues, len(values))
+	require.NoError(t, err)
+	require.Len(t, decodedValues, len(values))
 	for i := 0; i < len(decodedValues); i++ {
-		assert.True(t, values[i].timestamp.Equal(decodedValues[i].timestamp))
-		assert.Equal(t, values[i].value, decodedValues[i].value)
-		assert.Equal(t, values[i].unit, decodedValues[i].unit)
-		assert.Equal(t, values[i].annotation, decodedValues[i].annotation)
+		m := dynamic.NewMessage(testSchema)
+		require.NoError(t, m.Unmarshal(decodedValues[i].annotation))
+		fmt.Println(m.String())
+
+		require.True(t, values[i].timestamp.Equal(decodedValues[i].timestamp))
+		require.Equal(t, values[i].value, decodedValues[i].value)
+		require.Equal(t, values[i].unit, decodedValues[i].unit)
+		require.Equal(t, values[i].annotation, decodedValues[i].annotation)
 	}
 }
 

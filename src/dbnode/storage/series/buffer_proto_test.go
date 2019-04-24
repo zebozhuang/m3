@@ -13,10 +13,10 @@ import (
 
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
-	"github.com/stretchr/testify/assert"
 	"github.com/jhump/protoreflect/dynamic"
-	"github.com/stretchr/testify/require"
 	"github.com/m3db/m3/src/x/pool"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -56,12 +56,12 @@ func newBufferTestProtoOptions() Options {
 		SetBufferBucketVersionsPool(bufferBucketVersionsPool)
 	opts = opts.
 		SetRetentionOptions(opts.RetentionOptions().
-		SetBlockSize(2 * time.Minute).
-		SetBufferFuture(10 * time.Second).
-		SetBufferPast(10 * time.Second)).
+			SetBlockSize(2 * time.Minute).
+			SetBufferFuture(10 * time.Second).
+			SetBufferPast(10 * time.Second)).
 		SetDatabaseBlockOptions(opts.DatabaseBlockOptions().
-		SetContextPool(opts.ContextPool()).
-		SetEncoderPool(opts.EncoderPool()))
+			SetContextPool(opts.ContextPool()).
+			SetEncoderPool(opts.EncoderPool()))
 	return opts
 }
 
@@ -143,7 +143,7 @@ func TestBufferProtoWriteRead(t *testing.T) {
 		protoBytes, err := newMessage(protoData[i]).Marshal()
 		require.NoError(t, err)
 		data[i] = value{
-			curr.Add(time.Duration(i) * time.Second), float64(i), xtime.Second, protoBytes}
+			curr.Add(time.Duration(i) * time.Second), 0, xtime.Second, protoBytes}
 	}
 
 	for _, v := range data {
