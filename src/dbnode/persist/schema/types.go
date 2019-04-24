@@ -71,6 +71,7 @@ type IndexSummary struct {
 }
 
 // LogInfo stores summary information about a commit log
+// TODO: rename to LogInfoV1 once changed
 type LogInfo struct {
 	// Deprecated fields, left intact as documentation for the actual
 	// format on disk.
@@ -81,8 +82,39 @@ type LogInfo struct {
 }
 
 // LogEntry stores per-entry data in a commit log
+// TODO: rename to LogEntryV1
 type LogEntry struct {
 	Index      uint64
+	Create     int64
+	Metadata   []byte
+	Timestamp  int64
+	Value      float64
+	Unit       uint32
+	Annotation []byte
+}
+
+// LogMajorVersion is the major schema version for a commit log, this is
+// only incremented when breaking changes are introduced and tooling
+// needs to upgrade older files to newer files before a server restart.
+const LogMajorVersion = 2
+
+type LogInfoHeader struct {
+	MajorVersion int64
+}
+
+type LogInfoV2 struct {
+	Header    LogInfoHeader
+	ChunkSize uint64
+}
+
+// LogEntryHeaderV2 is a header per log entry that allows for fast skipping
+// of entries by shard.
+type LogEntryHeaderV2 struct {
+	Shard uint32
+	Index uint64
+}
+
+type LogEntryV2 struct {
 	Create     int64
 	Metadata   []byte
 	Timestamp  int64

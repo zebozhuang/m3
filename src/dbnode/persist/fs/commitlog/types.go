@@ -82,6 +82,12 @@ type CommitLog interface {
 	// QueueLength returns the number of writes that are currently in the commitlog
 	// queue.
 	QueueLength() int64
+
+	// Watch creates a new commit log watch for tailing the commit log.
+	Watch() (CommitLogWatch, error)
+}
+
+type CommitLogWatch struct {
 }
 
 // Iterator provides an iterator for commit logs

@@ -35,9 +35,9 @@ import (
 	"github.com/m3db/m3/src/dbnode/persist/fs/msgpack"
 	"github.com/m3db/m3/src/dbnode/persist/schema"
 	"github.com/m3db/m3/src/dbnode/ts"
+	"github.com/m3db/m3/src/x/ident"
 	"github.com/m3db/m3/src/x/os"
 	"github.com/m3db/m3/src/x/serialize"
-	"github.com/m3db/m3/src/x/ident"
 	xtime "github.com/m3db/m3/src/x/time"
 )
 
@@ -197,9 +197,12 @@ func (w *writer) Write(
 	unit xtime.Unit,
 	annotation ts.Annotation,
 ) error {
-	var logEntry schema.LogEntry
+	var logEntryHeader schema.LogEntryHeaderV2
+	logEntryHeader.Shard = series.Shard
+	logEntryHeader.Index = series.UniqueIndex
+
+	var logEntry schema.LogEntryV2
 	logEntry.Create = w.nowFn().UnixNano()
-	logEntry.Index = series.UniqueIndex
 
 	seen := w.seen.Test(uint(series.UniqueIndex))
 	if !seen {
@@ -246,7 +249,8 @@ func (w *writer) Write(
 	logEntry.Annotation = annotation
 
 	var err error
-	w.logEncoderBuff, err = msgpack.EncodeLogEntryFast(w.logEncoderBuff[:0], logEntry)
+	w.logEncoderBuff, err = msgpack.EncodeLogEntryV2Fast(w.logEncoderBuff[:0],
+		logEntryHeader, logEntry)
 	if err != nil {
 		return err
 	}

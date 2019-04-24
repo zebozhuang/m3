@@ -33,10 +33,10 @@ import (
 	"github.com/m3db/m3/src/dbnode/persist/fs/msgpack"
 	"github.com/m3db/m3/src/dbnode/persist/schema"
 	"github.com/m3db/m3/src/dbnode/ts"
-	"github.com/m3db/m3/src/x/serialize"
 	"github.com/m3db/m3/src/x/checked"
 	"github.com/m3db/m3/src/x/ident"
 	"github.com/m3db/m3/src/x/pool"
+	"github.com/m3db/m3/src/x/serialize"
 	xtime "github.com/m3db/m3/src/x/time"
 )
 
@@ -118,6 +118,7 @@ type reader struct {
 	hasBeenOpened        bool
 	bgWorkersInitialized int64
 	seriesPredicate      SeriesFilterPredicate
+	buffer               []byte
 }
 
 func newCommitLogReader(opts Options, seriesPredicate SeriesFilterPredicate) commitLogReader {
@@ -195,18 +196,30 @@ func (r *reader) Read() (
 	annotation ts.Annotation,
 	resultErr error,
 ) {
-	if r.nextIndex == 0 {
-		err := r.startBackgroundWorkers()
-		if err != nil {
-			return ts.Series{}, ts.Datapoint{}, xtime.Unit(0), ts.Annotation(nil), err
-		}
+	var err error
+	r.buffer, err = r.readEntry(r.buffer)
+	if err != nil {
+		// Err will sometimes be EOF which is as expected at the end
+		return ts.Series{}, ts.Datapoint{}, xtime.Unit(0), ts.Annotation(nil), err
 	}
-	rr, ok := <-r.outChan
-	if !ok {
-		return ts.Series{}, ts.Datapoint{}, xtime.Unit(0), ts.Annotation(nil), io.EOF
+
+	header, entry, err := msgpack.DecodeLogEntryV2Fast()
+	if err != nil {
+		return ts.Series{}, ts.Datapoint{}, xtime.Unit(0), ts.Annotation(nil), err
 	}
-	r.nextIndex++
-	return rr.series, rr.datapoint, rr.unit, rr.annotation, rr.resultErr
+
+	// if r.nextIndex == 0 {
+	// 	err := r.startBackgroundWorkers()
+	// 	if err != nil {
+	// 		return ts.Series{}, ts.Datapoint{}, xtime.Unit(0), ts.Annotation(nil), err
+	// 	}
+	// }
+	// rr, ok := <-r.outChan
+	// if !ok {
+	// 	return ts.Series{}, ts.Datapoint{}, xtime.Unit(0), ts.Annotation(nil), io.EOF
+	// }
+	// r.nextIndex++
+	// return rr.series, rr.datapoint, rr.unit, rr.annotation, rr.resultErr
 }
 
 func (r *reader) startBackgroundWorkers() error {
@@ -233,18 +246,19 @@ func (r *reader) readLoop() {
 		}
 	}()
 
-	decodingOpts := r.opts.FilesystemOptions().DecodingOptions()
-	decoder := msgpack.NewDecoder(decodingOpts)
-	decoderStream := msgpack.NewByteDecoderStream(nil)
-
-	reusedBytes := make([]byte, 0, r.opts.FlushSize())
-
+	var (
+		decodingOpts  = r.opts.FilesystemOptions().DecodingOptions()
+		decoder       = msgpack.NewDecoder(decodingOpts)
+		decoderStream = msgpack.NewByteDecoderStream(nil)
+		data          = make([]byte, 0, r.opts.FlushSize())
+		err           error
+	)
 	for {
 		select {
 		case <-r.cancelCtx.Done():
 			return
 		default:
-			data, err := r.readChunk(reusedBytes)
+			data, err = r.readEntry(data)
 			if err != nil {
 				if err == io.EOF {
 					return
@@ -266,16 +280,8 @@ func (r *reader) readLoop() {
 			bufPool := r.decoderBufPools[shardedIdx]
 			buf := <-bufPool
 
-			// Resize the buffer as necessary
-			bufCap := len(buf)
-			dataLen := len(data)
-			if bufCap < dataLen {
-				diff := dataLen - bufCap
-				for i := 0; i < diff; i++ {
-					buf = append(buf, 0)
-				}
-			}
-			buf = buf[:dataLen]
+			// Resize and extend the buffer as necessary
+			buf = resizeAndMaybeExtend(buf, len(data))
 
 			// Copy into the buffer
 			copy(buf, data)
@@ -460,23 +466,15 @@ func (r *reader) decodeAndHandleMetadata(
 	return nil
 }
 
-func (r *reader) readChunk(buf []byte) ([]byte, error) {
+func (r *reader) readEntry(buf []byte) ([]byte, error) {
 	// Read size of message
 	size, err := binary.ReadUvarint(r.chunkReader)
 	if err != nil {
 		return nil, err
 	}
 
-	// Extend buffer as necessary
-	if len(buf) < int(size) {
-		diff := int(size) - len(buf)
-		for i := 0; i < diff; i++ {
-			buf = append(buf, 0)
-		}
-	}
-
-	// Size target buffer for reading
-	buf = buf[:size]
+	// Size target buffer for reading and extend as necessary
+	buf = resizeAndMaybeExtend(buf, int(size))
 
 	// Read message
 	if _, err := r.chunkReader.Read(buf); err != nil {
@@ -487,7 +485,7 @@ func (r *reader) readChunk(buf []byte) ([]byte, error) {
 }
 
 func (r *reader) readInfo() (schema.LogInfo, error) {
-	data, err := r.readChunk([]byte{})
+	data, err := r.readEntry([]byte{})
 	if err != nil {
 		return emptyLogInfo, err
 	}
@@ -525,4 +523,16 @@ func (r *reader) close() error {
 	}
 
 	return r.chunkReader.fd.Close()
+}
+
+func resizeAndMaybeExtend(buf []byte, size int) []byte {
+	if cap(buf) < size {
+		nextSize := 2 * cap(buf)
+		if nextSize >= size {
+			buf = make([]byte, 0, nextSize)
+		} else {
+			buf = make([]byte, 0, size)
+		}
+	}
+	return buf[:size]
 }

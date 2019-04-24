@@ -66,7 +66,7 @@ func DecodeLogEntryFast(b []byte) (schema.LogEntry, error) {
 	)
 
 	if len(b) < len(logEntryHeader) {
-		return schema, notEnoughBytesError(
+		return empty, notEnoughBytesError(
 			decodeLogEntryFuncName, len(logEntryHeader), len(b))
 	}
 	b = b[len(logEntryHeader):]
@@ -109,6 +109,68 @@ func DecodeLogEntryFast(b []byte) (schema.LogEntry, error) {
 	}
 
 	return schema, err
+}
+
+func DecodeLogEntryV2Fast(b []byte) (
+	schema.LogEntryHeaderV2,
+	schema.LogEntryV2,
+	error,
+) {
+	var (
+		emptyHeader schema.LogEntryHeaderV2
+		header      schema.LogEntryHeaderV2
+		emptyEntry  schema.LogEntryV2
+		entry       schema.LogEntryV2
+	)
+	if len(b) < len(logEntryHeader) {
+		return emptyHeader, emptyEntry, notEnoughBytesError(
+			decodeLogEntryFuncName, len(logEntryHeader), len(b))
+	}
+	b = b[len(logEntryHeader):]
+
+	shard, b, err := decodeUint(b)
+	if err != nil {
+		return emptyHeader, emptyEntry, err
+	}
+	header.Shard = uint32(shard)
+
+	header.Index, b, err = decodeUint(b)
+	if err != nil {
+		return emptyHeader, emptyEntry, err
+	}
+
+	entry.Create, b, err = decodeInt(b)
+	if err != nil {
+		return emptyHeader, emptyEntry, err
+	}
+
+	entry.Metadata, b, err = decodeBytes(b)
+	if err != nil {
+		return emptyHeader, emptyEntry, err
+	}
+
+	entry.Timestamp, b, err = decodeInt(b)
+	if err != nil {
+		return emptyHeader, emptyEntry, err
+	}
+
+	entry.Value, b, err = decodeFloat64(b)
+	if err != nil {
+		return emptyHeader, emptyEntry, err
+	}
+
+	unit, b, err := decodeUint(b)
+	if err != nil {
+		return emptyHeader, emptyEntry, err
+	}
+	entry.Unit = uint32(unit)
+
+	entry.Annotation, b, err = decodeBytes(b)
+	if err != nil {
+		return emptyHeader, emptyEntry, err
+	}
+
+	return header, entry, err
 }
 
 // DecodeLogMetadataFast is the same as DecodeLogEntryFast except for the metadata

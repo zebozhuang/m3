@@ -68,6 +68,31 @@ func EncodeLogEntryFast(b []byte, entry schema.LogEntry) ([]byte, error) {
 	return b, nil
 }
 
+func EncodeLogEntryV2Fast(
+	b []byte,
+	header schema.LogEntryHeaderV2,
+	entry schema.LogEntryV2,
+) ([]byte, error) {
+	if logEntryHeaderErr != nil {
+		return nil, logEntryHeaderErr
+	}
+
+	// TODO(rartoul): Can optimize this further by storing the version as part of the
+	// info for the commit log file itself, instead of in every entry.
+	// https://github.com/m3db/m3/issues/1161
+	b = append(b, logEntryHeader...)
+	b = encodeVarUint64(b, uint64(header.Shard))
+	b = encodeVarUint64(b, header.Index)
+	b = encodeVarInt64(b, entry.Create)
+	b = encodeBytes(b, entry.Metadata)
+	b = encodeVarInt64(b, entry.Timestamp)
+	b = encodeFloat64(b, entry.Value)
+	b = encodeVarUint64(b, uint64(entry.Unit))
+	b = encodeBytes(b, entry.Annotation)
+
+	return b, nil
+}
+
 // EncodeLogMetadataFast is the same as EncodeLogEntryFast except for the metadata
 // entries instead of the data entries.
 func EncodeLogMetadataFast(b []byte, entry schema.LogMetadata) ([]byte, error) {
