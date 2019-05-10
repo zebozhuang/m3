@@ -75,3 +75,9 @@ func (q *FieldQuery) ToProto() *querypb.Query {
 func (q *FieldQuery) String() string {
 	return fmt.Sprintf("field(%s)", q.field)
 }
+
+// Field allows direct access to the field name if search query is casted
+// to FieldQuery.
+func (q *FieldQuery) Field() []byte {
+	return q.field
+}

@@ -38,6 +38,7 @@ import (
 	"github.com/m3db/m3/src/m3ninx/index/segment/fst"
 	"github.com/m3db/m3/src/m3ninx/search"
 	"github.com/m3db/m3/src/m3ninx/search/executor"
+	"github.com/m3db/m3/src/m3ninx/search/query"
 	"github.com/m3db/m3/src/x/context"
 	xerrors "github.com/m3db/m3/src/x/errors"
 	"github.com/m3db/m3/src/x/ident"
@@ -766,7 +767,7 @@ func (b *block) segmentsWithRLock() []segment.Segment {
 // to the results datastructure).
 func (b *block) Query(
 	cancellable *resource.CancellableLifetime,
-	query Query,
+	q Query,
 	opts QueryOptions,
 	results BaseResults,
 ) (bool, error) {
@@ -777,13 +778,21 @@ func (b *block) Query(
 		return false, ErrUnableToQueryBlockClosed
 	}
 
+	searchQuery := q.Query.SearchQuery()
+	if fieldQuery, ok := searchQuery.(*query.FieldQuery); ok {
+		if aggResults, ok := results.(AggregateResults); ok {
+			return b.addAggregateResultsWithLock(cancellable, fieldQuery,
+				opts, aggResults)
+		}
+	}
+
 	exec, err := b.newExecutorFn()
 	if err != nil {
 		return false, err
 	}
 
 	// FOLLOWUP(prateek): push down QueryOptions to restrict results
-	iter, err := exec.Execute(query.Query.SearchQuery())
+	iter, err := exec.Execute(searchQuery)
 	if err != nil {
 		exec.Close()
 		return false, err
@@ -874,6 +883,56 @@ func (b *block) addQueryResults(
 
 	// return results.
 	return batch, size, err
+}
+
+func (b *block) addAggregateResultsWithLock(
+	cancellable *resource.CancellableLifetime,
+	q *query.FieldQuery,
+	opts QueryOptions,
+	results AggregateResults,
+) (bool, error) {
+	fieldID := b.pooledID(q.Field())
+
+	// Always just add one value at a time
+	values := make([]AggregateResultsEntry, 1)
+	values[0].Field = fieldID
+	values[0].Terms = make([]ident.ID, 1)
+	size := 0
+
+	for _, segs := range [][]*readableSeg{
+		b.foregroundSegments,
+		b.backgroundSegments,
+	} {
+		for _, seg := range segs {
+			s := seg.Segment()
+			it, err := s.TermsIterable().Terms(q.Field())
+			if err != nil {
+				return false, err
+			}
+
+			for it.Next() {
+				if opts.LimitExceeded(size) {
+					break
+				}
+
+				value, _ := it.Current()
+				valueID := b.pooledID(value)
+
+				values[0].Terms[0] = valueID
+
+				size = results.AddFields(values)
+			}
+			if err := it.Err(); err != nil {
+				return false, err
+			}
+			if err := it.Close(); err != nil {
+				return false, err
+			}
+		}
+	}
+
+	exhaustive := !opts.LimitExceeded(size)
+	return exhaustive, nil
 }
 
 // Aggregate acquires a read lock on the block so that the segments
