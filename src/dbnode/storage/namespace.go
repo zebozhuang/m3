@@ -979,6 +979,18 @@ type coldFlushReuseableResources struct {
 	fsReader      fs.DataFileSetReader
 }
 
+func (r *coldFlushReuseableResources) reset() {
+	for _, seriesList := range r.dirtySeriesToWrite {
+		if seriesList != nil {
+			seriesList.Reset()
+		}
+		// Don't delete the empty list from the map so that other shards don't
+		// need to reinitialize the list for these blocks.
+	}
+
+	r.dirtySeries.Reset()
+}
+
 func (n *dbNamespace) ColdFlush(
 	flushPersist persist.FlushPreparer,
 ) error {
@@ -1010,7 +1022,7 @@ func (n *dbNamespace) ColdFlush(
 	resources := coldFlushReuseableResources{
 		dirtySeries:        newDirtySeriesMap(dirtySeriesMapOptions{}),
 		dirtySeriesToWrite: make(map[xtime.UnixNano]*idList),
-		// TODO(juchan) set pool options
+		// TODO(juchan): set pool options.
 		idElementPool: newIDElementPool(nil),
 		fsReader:      fsReader,
 	}
@@ -1019,7 +1031,7 @@ func (n *dbNamespace) ColdFlush(
 		if err != nil {
 			detailedErr := fmt.Errorf("shard %d failed to compact: %v", shard.ID(), err)
 			multiErr = multiErr.Add(detailedErr)
-			// Continue with remaining shards
+			// Continue with remaining shards.
 		}
 	}
 
