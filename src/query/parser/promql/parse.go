@@ -203,17 +203,16 @@ func (p *parseState) walk(node pql.Node) error {
 			}
 		}
 
-		op, ok, err := NewFunctionExpr(n.Func.Name, argValues, stringValues)
+		fmt.Println("Making a new function exp", n.Func.Name, n.Args.String())
+		op, err := NewFunctionExpr(n.Func.Name, argValues, stringValues)
 		if err != nil {
 			return err
 		}
 
-		if !ok {
-			return nil
-		}
-
 		opTransform := parser.NewTransformFromOperation(op, p.transformLen())
+		fmt.Println("its a new transform", op.OpType())
 		if op.OpType() != scalar.TimeType {
+			fmt.Println("last transform", p.lastTransformID(), opTransform.ID)
 			p.edges = append(p.edges, parser.Edge{
 				ParentID: p.lastTransformID(),
 				ChildID:  opTransform.ID,

@@ -21,6 +21,8 @@
 package binary
 
 import (
+	"fmt"
+
 	"github.com/m3db/m3/src/query/block"
 	"github.com/m3db/m3/src/query/executor/transform"
 	"github.com/m3db/m3/src/query/models"
@@ -65,6 +67,8 @@ func makeOrBlock(
 	for ; lIter.Next(); index++ {
 		lStep := lIter.Current()
 		lValues := lStep.Values()
+
+		fmt.Println("step values", lValues)
 		if err := builder.AppendValues(index, lValues); err != nil {
 			return nil, err
 		}

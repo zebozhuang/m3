@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/m3db/m3/src/query/functions/noop"
+
 	"github.com/m3db/m3/src/query/functions"
 	"github.com/m3db/m3/src/query/functions/aggregation"
 	"github.com/m3db/m3/src/query/functions/binary"
@@ -40,7 +42,7 @@ import (
 	"github.com/prometheus/prometheus/promql"
 )
 
-// NewSelectorFromVector creates a new fetchop
+// NewSelectorFromVector creates a new instantaneous fetch operation.
 func NewSelectorFromVector(
 	n *promql.VectorSelector,
 	tagOpts models.TagOptions,
@@ -57,7 +59,7 @@ func NewSelectorFromVector(
 	}, nil
 }
 
-// NewSelectorFromMatrix creates a new fetchop
+// NewSelectorFromMatrix creates a new fetch operation.
 func NewSelectorFromMatrix(
 	n *promql.MatrixSelector,
 	tagOpts models.TagOptions,
@@ -75,7 +77,8 @@ func NewSelectorFromMatrix(
 	}, nil
 }
 
-// NewAggregationOperator creates a new aggregation operator based on the type
+// NewAggregationOperator creates a new aggregation operator based on the
+// expression passed in.
 func NewAggregationOperator(expr *promql.AggregateExpr) (parser.Params, error) {
 	opType := expr.Op
 	byteMatchers := make([][]byte, len(expr.Grouping))
@@ -141,7 +144,7 @@ func getAggOpType(opType promql.ItemType) string {
 	}
 }
 
-// NewScalarOperator creates a new scalar operator
+// NewScalarOperator creates a new scalar operator.
 func NewScalarOperator(expr *promql.NumberLiteral) (parser.Params, error) {
 	return scalar.NewScalarOp(
 		func(_ time.Time) float64 { return expr.Val },
@@ -149,7 +152,7 @@ func NewScalarOperator(expr *promql.NumberLiteral) (parser.Params, error) {
 	)
 }
 
-// NewBinaryOperator creates a new binary operator based on the type
+// NewBinaryOperator creates a new binary operator based on the type.
 func NewBinaryOperator(expr *promql.BinaryExpr, lhs, rhs parser.NodeID) (parser.Params, error) {
 	matching := promMatchingToM3(expr.VectorMatching)
 
@@ -166,12 +169,13 @@ func NewBinaryOperator(expr *promql.BinaryExpr, lhs, rhs parser.NodeID) (parser.
 	return binary.NewOp(op, nodeParams)
 }
 
-// NewFunctionExpr creates a new function expr based on the type
+// NewFunctionExpr creates a new processing function based on the parsed name
+// and arguments.
 func NewFunctionExpr(
 	name string,
 	argValues []interface{},
 	stringValues []string,
-) (parser.Params, bool, error) {
+) (parser.Params, error) {
 	var p parser.Params
 	var err error
 
@@ -179,77 +183,74 @@ func NewFunctionExpr(
 	case linear.AbsType, linear.CeilType, linear.ExpType, linear.FloorType, linear.LnType,
 		linear.Log10Type, linear.Log2Type, linear.SqrtType:
 		p, err = linear.NewMathOp(name)
-		return p, true, err
+		return p, err
 
 	case linear.AbsentType:
 		p = linear.NewAbsentOp()
-		return p, true, err
+		return p, err
 
 	case linear.ClampMinType, linear.ClampMaxType:
 		p, err = linear.NewClampOp(argValues, name)
-		return p, true, err
+		return p, err
 
 	case linear.HistogramQuantileType:
 		p, err = linear.NewHistogramQuantileOp(argValues, name)
-		return p, true, err
+		return p, err
 
 	case linear.RoundType:
 		p, err = linear.NewRoundOp(argValues)
-		return p, true, err
+		return p, err
 
 	case linear.DayOfMonthType, linear.DayOfWeekType, linear.DaysInMonthType, linear.HourType,
 		linear.MinuteType, linear.MonthType, linear.YearType:
 		p, err = linear.NewDateOp(name)
-		return p, true, err
+		return p, err
 
 	case tag.TagJoinType, tag.TagReplaceType:
 		p, err = tag.NewTagOp(name, stringValues)
-		return p, true, err
+		return p, err
 
 	case temporal.AvgType, temporal.CountType, temporal.MinType,
 		temporal.MaxType, temporal.SumType, temporal.StdDevType,
 		temporal.StdVarType:
 		p, err = temporal.NewAggOp(argValues, name)
-		return p, true, err
+		return p, err
 
 	case temporal.QuantileType:
 		p, err = temporal.NewQuantileOp(argValues, name)
-		return p, true, err
+		return p, err
 
 	case temporal.HoltWintersType:
 		p, err = temporal.NewHoltWintersOp(argValues)
-		return p, true, err
+		return p, err
 
 	case temporal.IRateType, temporal.IDeltaType, temporal.RateType, temporal.IncreaseType,
 		temporal.DeltaType:
 		p, err = temporal.NewRateOp(argValues, name)
-		return p, true, err
+		return p, err
 
 	case temporal.PredictLinearType, temporal.DerivType:
 		p, err = temporal.NewLinearRegressionOp(argValues, name)
-		return p, true, err
+		return p, err
 
 	case temporal.ResetsType, temporal.ChangesType:
 		p, err = temporal.NewFunctionOp(argValues, name)
-		return p, true, err
+		return p, err
 
-	case linear.SortType, linear.SortDescType:
-		return nil, false, err
-
-	case scalar.ScalarType:
-		return nil, false, err
+	case linear.SortType, linear.SortDescType, scalar.ScalarType, scalar.VectorType:
+		return noop.NewNoop()
 
 	case unconsolidated.TimestampType:
 		p, err = unconsolidated.NewTimestampOp(name)
-		return p, true, err
+		return p, err
 
 	case scalar.TimeType:
-		p, err = scalar.NewScalarOp(func(t time.Time) float64 { return float64(t.Unix()) }, scalar.TimeType)
-		return p, true, err
+		scalarFn := func(t time.Time) float64 { return float64(t.Unix()) }
+		p, err = scalar.NewScalarOp(scalarFn, scalar.TimeType)
+		return p, err
 
 	default:
-		// TODO: handle other types
-		return nil, false, fmt.Errorf("function not supported: %s", name)
+		return nil, fmt.Errorf("function not supported: %s", name)
 	}
 }
 
@@ -295,7 +296,7 @@ func getBinaryOpType(opType promql.ItemType) string {
 
 const promDefaultName = "__name__"
 
-// LabelMatchersToModelMatcher parses promql matchers to model matchers
+// LabelMatchersToModelMatcher parses promql matchers to model matchers.
 func LabelMatchersToModelMatcher(
 	lMatchers []*labels.Matcher,
 	tagOpts models.TagOptions,
@@ -325,7 +326,7 @@ func LabelMatchersToModelMatcher(
 	return matchers, nil
 }
 
-// promTypeToM3 converts a prometheus label type to m3 matcher type
+// promTypeToM3 converts a prometheus label type to m3 matcher type.
 //TODO(nikunj): Consider merging with prompb code
 func promTypeToM3(labelType labels.MatchType) (models.MatchType, error) {
 	switch labelType {
@@ -359,7 +360,7 @@ func promVectorCardinalityToM3(card promql.VectorMatchCardinality) binary.Vector
 }
 
 func promMatchingToM3(vectorMatching *promql.VectorMatching) *binary.VectorMatching {
-	// vectorMatching can be nil iff at least one of the sides is a scalar
+	// NB: vectorMatching can be nil iff at least one of the sides is a scalar.
 	if vectorMatching == nil {
 		return nil
 	}

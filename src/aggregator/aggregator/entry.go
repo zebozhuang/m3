@@ -369,6 +369,7 @@ func (e *Entry) addUntimed(
 		return err
 	}
 
+
 	sm, err := e.activeStagedMetadataWithLock(currTime, metadatas)
 	if err != nil {
 		e.RUnlock()
